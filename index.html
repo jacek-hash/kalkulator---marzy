@@ -1432,6 +1432,7 @@
     <button class="btn-process" onclick="processExcel()">▶ Przelicz ceny brutto</button>
     <button class="btn-export" onclick="exportExcel()" id="btn-export" style="display:none">⬇ Pobierz wynik (.xlsx)</button>
   </div>
+    <button class="btn-reset" onclick="resetExcel()" style="margin-top:0">&#8635; Wyczyść</button>
 
   <!-- RESULTS -->
   <div class="excel-results" id="excel-results">
@@ -1617,6 +1618,22 @@ function exportExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ceny brutto');
   XLSX.writeFile(wb, `ceny_brutto_VAT${excelVatRate}.xlsx`);
+}
+
+function resetExcel() {
+  excelData = [];
+  excelHeaders = [];
+  processedRows = [];
+  document.getElementById("excel-file-input").value = "";
+  document.getElementById("file-name-badge").style.display = "none";
+  document.getElementById("col-mapping").classList.remove("visible");
+  document.getElementById("excel-vat-row").style.display = "none";
+  document.getElementById("mapping-actions").style.display = "none";
+  document.getElementById("excel-results").classList.remove("visible");
+  document.getElementById("btn-export").style.display = "none";
+  document.getElementById("excel-stats").innerHTML = "";
+  document.getElementById("excel-thead").innerHTML = "";
+  document.getElementById("excel-tbody").innerHTML = "";
 }
 </script>
 </body>
