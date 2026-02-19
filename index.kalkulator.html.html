@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Marży — Sklep Detaliczny</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --navy-light: #152235;
+    --navy-mid: #1e3050;
+    --gold: #c9a84c;
+    --gold-light: #e8c96b;
+    --gold-dim: rgba(201,168,76,0.15);
+    --cream: #f5f0e8;
+    --text: #e8e4dc;
+    --text-muted: #8a95a3;
+    --success: #4caf82;
+    --danger: #e05c5c;
+    --border: rgba(201,168,76,0.2);
+    --card-bg: rgba(21,34,53,0.95);
+    --input-bg: rgba(13,27,42,0.8);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(201,168,76,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 100%, rgba(30,48,80,0.8) 0%, transparent 60%),
+      repeating-linear-gradient(45deg, transparent, transparent 80px, rgba(201,168,76,0.015) 80px, rgba(201,168,76,0.015) 81px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    padding: 48px 0 36px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .logo-area h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+
+  .logo-area h1 span {
+    color: var(--gold);
+  }
+
+  .logo-area p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 10px 22px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .btn-reset:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: var(--gold-dim);
+  }
+
+  /* GRID LAYOUT */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 700px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.6;
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--gold-light);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .card-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+
+  /* INPUTS */
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  .field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .field-label label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .tooltip-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .tooltip-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+    font-style: italic;
+    font-family: serif;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .tooltip-icon:hover { border-color: var(--gold); color: var(--gold); }
+
+  .tooltip-text {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    color: var(--text);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 100;
+    font-family: 'DM Mono', monospace;
+    max-width: 220px;
+    white-space: normal;
+    text-align: center;
+    width: 200px;
+  }
+
+  .tooltip-wrap:hover .tooltip-text { opacity: 1; }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-wrap input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 50px 12px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 1.05rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  .input-wrap input::-webkit-outer-spin-button,
+  .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .input-wrap input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+    background: rgba(13,27,42,0.95);
+  }
+
+  .input-wrap input.error {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(224,92,92,0.12);
+  }
+
+  .input-wrap input.computed {
+    background: rgba(201,168,76,0.06);
+    border-color: rgba(201,168,76,0.35);
+    color: var(--gold-light);
+  }
+
+  .input-unit {
+    position: absolute;
+    right: 14px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    pointer-events: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .error-msg {
+    font-size: 0.72rem;
+    color: var(--danger);
+    margin-top: 4px;
+    height: 14px;
+    transition: opacity 0.2s;
+  }
+
+  /* VAT ROW */
+  .vat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .vat-row label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .vat-options {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .vat-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .vat-btn.active {
+    background: var(--gold-dim);
+    border-color: var(--gold);
+    color: var(--gold-light);
+  }
+
+  .vat-btn:hover:not(.active) {
+    border-color: rgba(201,168,76,0.4);
+    color: var(--text);
+  }
+
+  /* RESULTS CARD */
+  .results-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .results-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.6;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .result-item {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .result-item:hover { transform: translateY(-2px); border-color: rgba(201,168,76,0.35); }
+
+  .result-item .r-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .result-item .r-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--cream);
+    transition: color 0.3s;
+  }
+
+  .result-item .r-value.positive { color: var(--success); }
+  .result-item .r-value.negative { color: var(--danger); }
+  .result-item .r-value.gold { color: var(--gold-light); }
+
+  .result-item .r-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  /* MARGIN vs MARKUP EXPLAINER */
+  .explainer {
+    background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(21,34,53,0.6));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 20px;
+  }
+
+  .explainer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 500px) { .explainer-grid { grid-template-columns: 1fr; } }
+
+  .explainer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .explainer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .badge-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .badge-dot.gold { background: var(--gold); }
+  .badge-dot.teal { background: #4cb5af; }
+
+  .explainer-formula {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: rgba(13,27,42,0.5);
+    padding: 6px 10px;
+    border-radius: 5px;
+  }
+
+  .explainer-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* TABLE SECTION */
+  .table-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .table-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.6;
+  }
+
+  .table-header-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .table-header-row > * { flex: 1; min-width: 160px; }
+
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead th {
+    background: rgba(201,168,76,0.1);
+    padding: 12px 16px;
+    text-align: right;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th:first-child { text-align: center; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(201,168,76,0.07);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(201,168,76,0.04); }
+
+  tbody tr.highlight-row {
+    background: rgba(201,168,76,0.08);
+  }
+
+  tbody td {
+    padding: 10px 16px;
+    text-align: right;
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  tbody td:first-child {
+    text-align: center;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+
+  .profit-positive { color: var(--success) !important; }
+  .profit-high { color: var(--gold-light) !important; font-weight: 600; }
+
+  /* Section label */
+  .section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Radio-like mode selector */
+  .mode-select {
+    display: flex;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+    margin-bottom: 20px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .mode-btn.active {
+    background: var(--gold-dim);
+    color: var(--gold-light);
+    border: 1px solid rgba(201,168,76,0.3);
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* VAT Info row */
+  .vat-info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .vat-info-item {
+    background: rgba(13,27,42,0.5);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .vat-info-item .vi-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+  }
+
+  .vat-info-item .vi-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--cream);
+  }
+
+  @media (max-width: 480px) {
+    .vat-info-row { grid-template-columns: 1fr; }
+    .card, .results-card, .table-section { padding: 20px 16px; }
+    header { padding: 32px 0 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-area">
+      <h1>Kalkulator <span>Marży</span></h1>
+      <p>Narzędzie dla handlu detalicznego</p>
+    </div>
+    <button class="btn-reset" onclick="resetAll()">↺ Resetuj wszystko</button>
+  </header>
+
+  <!-- MAIN CALCULATOR -->
+  <div class="main-grid">
+
+    <!-- INPUT CARD -->
+    <div class="card">
+      <div class="section-label">Dane wejściowe</div>
+      <div class="card-title">Kalkulator marży</div>
+      <div class="card-subtitle">Podaj dwie wartości — trzecia zostanie wyliczona automatycznie.</div>
+
+      <!-- MODE SELECTOR -->
+      <div class="mode-select">
+        <button class="mode-btn active" onclick="setMode('margin')" id="mode-margin">Oblicz z marżą</button>
+        <button class="mode-btn" onclick="setMode('price')" id="mode-price">Oblicz cenę sprzedaży</button>
+        <button class="mode-btn" onclick="setMode('cost')" id="mode-cost">Oblicz koszt</button>
+      </div>
+
+      <!-- KOSZT -->
+      <div class="field-group">
+        <div class="field-label">
+          <label>Koszt zakupu (netto)</label>
+          <div class="tooltip-wrap">
+            <div class="tooltip-icon">i</div>
+            <div class="tooltip-text">Cena, po której kupujesz towar od dostawcy (cena netto, bez VAT)</div>
+          </div>
+        </div>
+        <div class="input-wrap">
+          <input type="number" id="inp-cost" min="0" step="0.01" placeholder="np. 100" oninput="onInput('cost')">
+          <span class="input-unit">zł</span>
+        </div>
+        <div class="error-msg" id="err-cost"></div>
+      </div>
+
+      <!-- MARŻA -->
+      <div class="field-group">
+        <div class="field-label">
+          <label>Marża</label>
+          <div class="tooltip-wrap">
+            <div class="tooltip-icon">i</div>
+            <div class="tooltip-text">Marża = (Cena sprzedaży − Koszt) / Cena sprzedaży × 100%</div>
+          </div>
+        </div>
+        <div class="input-wrap">
+          <input type="number" id="inp-margin" min="0" max="99.99" step="0.01" placeholder="np. 30" oninput="onInput('margin')">
+          <span class="input-unit">%</span>
+        </div>
+        <div class="error-msg" id="err-margin"></div>
+      </div>
+
+      <!-- CENA SPRZEDAŻY -->
+      <div class="field-group">
+        <div class="field-label">
+          <label>Cena sprzedaży (netto)</label>
+          <div class="tooltip-wrap">
+            <div class="tooltip-icon">i</div>
+            <div class="tooltip-text">Cena, po której sprzedajesz towar klientowi (netto). Marża liczona jest właśnie od tej ceny.</div>
+          </div>
+        </div>
+        <div class="input-wrap">
+          <input type="number" id="inp-price" min="0" step="0.01" placeholder="np. 142.86" oninput="onInput('price')">
+          <span class="input-unit">zł</span>
+        </div>
+        <div class="error-msg" id="err-price"></div>
+      </div>
+
+      <!-- VAT -->
+      <div class="divider"></div>
+      <div class="vat-row">
+        <label>Stawka VAT:</label>
+        <div class="vat-options">
+          <button class="vat-btn active" data-vat="0" onclick="setVat(0)">0%</button>
+          <button class="vat-btn" data-vat="5" onclick="setVat(5)">5%</button>
+          <button class="vat-btn" data-vat="8" onclick="setVat(8)">8%</button>
+          <button class="vat-btn" data-vat="23" onclick="setVat(23)">23%</button>
+        </div>
+      </div>
+
+      <div class="vat-info-row" id="vat-info-row" style="display:none">
+        <div class="vat-info-item">
+          <div class="vi-label">Koszt brutto</div>
+          <div class="vi-value" id="vi-cost-gross">—</div>
+        </div>
+        <div class="vat-info-item">
+          <div class="vi-label">Cena sprzedaży brutto</div>
+          <div class="vi-value" id="vi-price-gross">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPLAINER CARD -->
+    <div class="card">
+      <div class="section-label">Pojęcia</div>
+      <div class="card-title">Marża vs Narzut</div>
+      <div class="card-subtitle">Dwa różne wskaźniki — ważne, by ich nie mylić. Marża jest zawsze liczona od ceny sprzedaży, narzut — od kosztu zakupu.</div>
+
+      <div class="explainer">
+        <div class="explainer-grid">
+          <div class="explainer-item">
+            <div class="explainer-badge" style="color: var(--gold)">
+              <span class="badge-dot gold"></span> Marża %
+            </div>
+            <div class="explainer-formula">(Cena − Koszt) / Cena × 100</div>
+            <div class="explainer-desc" style="margin-top:6px">Udział zysku <strong>w cenie sprzedaży</strong>. Nie może przekroczyć 100%.</div>
+          </div>
+          <div class="explainer-item">
+            <div class="explainer-badge" style="color: #4cb5af">
+              <span class="badge-dot teal"></span> Narzut %
+            </div>
+            <div class="explainer-formula">(Cena − Koszt) / Koszt × 100</div>
+            <div class="explainer-desc" style="margin-top:6px">Zysk <strong>w stosunku do kosztu</strong>. Może być większy niż 100%.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-label">Przykłady</div>
+      <div style="display:grid; gap: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 14px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border); cursor:pointer;" onclick="loadExample(100,30)" title="Kliknij by załadować">
+          <div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:2px">Koszt 100 zł, marża 30%</div>
+            <div style="font-family:'DM Mono',monospace; font-size:0.88rem; color:var(--cream)">Cena: 142,86 zł | Zysk: 42,86 zł</div>
+          </div>
+          <div style="color:var(--text-muted); font-size:0.8rem">↗</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 14px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border); cursor:pointer;" onclick="loadExample(250,50)" title="Kliknij by załadować">
+          <div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:2px">Koszt 250 zł, marża 50%</div>
+            <div style="font-family:'DM Mono',monospace; font-size:0.88rem; color:var(--cream)">Cena: 500,00 zł | Zysk: 250,00 zł</div>
+          </div>
+          <div style="color:var(--text-muted); font-size:0.8rem">↗</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 14px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border); cursor:pointer;" onclick="loadExample(75,45)" title="Kliknij by załadować">
+          <div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:2px">Koszt 75 zł, marża 45%</div>
+            <div style="font-family:'DM Mono',monospace; font-size:0.88rem; color:var(--cream)">Cena: 136,36 zł | Zysk: 61,36 zł</div>
+          </div>
+          <div style="color:var(--text-muted); font-size:0.8rem">↗</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS CARD -->
+  <div class="results-card">
+    <div class="section-label">Wyniki</div>
+    <div class="card-title">Podsumowanie kalkulacji</div>
+    <div class="results-grid">
+      <div class="result-item">
+        <div class="r-label">Koszt zakupu</div>
+        <div class="r-value" id="res-cost">—</div>
+        <div class="r-sub">netto</div>
+      </div>
+      <div class="result-item">
+        <div class="r-label">Cena sprzedaży</div>
+        <div class="r-value gold" id="res-price">—</div>
+        <div class="r-sub">netto</div>
+      </div>
+      <div class="result-item">
+        <div class="r-label">Zysk (kwota)</div>
+        <div class="r-value" id="res-profit">—</div>
+        <div class="r-sub">wartość bezwzględna</div>
+      </div>
+      <div class="result-item">
+        <div class="r-label">Marża %</div>
+        <div class="r-value gold" id="res-margin">—</div>
+        <div class="r-sub">od ceny sprzedaży</div>
+      </div>
+      <div class="result-item">
+        <div class="r-label">Narzut %</div>
+        <div class="r-value" id="res-markup">—</div>
+        <div class="r-sub">od kosztu zakupu</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE SECTION -->
+  <div class="table-section">
+    <div class="section-label">Tabela marż</div>
+    <div class="card-title">Szybkie porównanie marż</div>
+    <div class="card-subtitle">Wpisz koszt zakupu, a tabela pokaże ceny sprzedaży i zyski dla marż od 10% do 70%.</div>
+
+    <div class="table-header-row" style="margin-top:20px">
+      <div class="field-group" style="margin-bottom:0">
+        <div class="field-label">
+          <label>Koszt zakupu dla tabeli</label>
+        </div>
+        <div class="input-wrap">
+          <input type="number" id="tbl-cost" min="0" step="0.01" placeholder="np. 100" oninput="generateTable()">
+          <span class="input-unit">zł</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper" style="margin-top:20px">
+      <table id="margin-table">
+        <thead>
+          <tr>
+            <th>Marża %</th>
+            <th>Cena sprzedaży (netto)</th>
+            <th>Zysk (kwota)</th>
+            <th>Narzut %</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr>
+            <td colspan="4" style="text-align:center; color: var(--text-muted); padding: 24px; font-size:0.85rem;">Wpisz koszt zakupu, aby wygenerować tabelę</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentMode = 'margin'; // which field is COMPUTED
+  let vatRate = 0;
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('mode-' + mode).classList.add('active');
+
+    // Mark computed field
+    ['cost','margin','price'].forEach(f => {
+      const el = document.getElementById('inp-' + f);
+      el.classList.remove('computed');
+      el.removeAttribute('readonly');
+    });
+
+    const computed = mode === 'margin' ? 'margin' : mode === 'price' ? 'price' : 'cost';
+    const el = document.getElementById('inp-' + computed);
+    el.classList.add('computed');
+    el.setAttribute('readonly', true);
+    el.placeholder = 'obliczane automatycznie';
+
+    calculate();
+  }
+
+  function onInput(field) {
+    clearError(field);
+    calculate();
+  }
+
+  function setVat(rate) {
+    vatRate = rate;
+    document.querySelectorAll('.vat-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.vat-btn[data-vat="' + rate + '"]').classList.add('active');
+    const row = document.getElementById('vat-info-row');
+    row.style.display = rate > 0 ? 'grid' : 'none';
+    updateVatDisplay();
+  }
+
+  function fmt(n, decimals=2) {
+    return n.toLocaleString('pl-PL', {minimumFractionDigits: decimals, maximumFractionDigits: decimals}) + ' zł';
+  }
+
+  function fmtPct(n, decimals=2) {
+    return n.toLocaleString('pl-PL', {minimumFractionDigits: decimals, maximumFractionDigits: decimals}) + ' %';
+  }
+
+  function setError(field, msg) {
+    const el = document.getElementById('err-' + field);
+    if(el) el.textContent = msg;
+    document.getElementById('inp-' + field).classList.add('error');
+  }
+
+  function clearError(field) {
+    const el = document.getElementById('err-' + field);
+    if(el) el.textContent = '';
+    document.getElementById('inp-' + field).classList.remove('error');
+  }
+
+  function setResult(id, value, cls='') {
+    const el = document.getElementById(id);
+    el.className = 'r-value' + (cls ? ' ' + cls : '');
+    el.textContent = value;
+  }
+
+  function calculate() {
+    clearError('cost'); clearError('margin'); clearError('price');
+
+    const costVal = document.getElementById('inp-cost').value;
+    const marginVal = document.getElementById('inp-margin').value;
+    const priceVal = document.getElementById('inp-price').value;
+
+    let cost = parseFloat(costVal);
+    let margin = parseFloat(marginVal);
+    let price = parseFloat(priceVal);
+
+    // Validate inputs
+    let valid = true;
+
+    if (currentMode === 'margin') {
+      // Compute margin from cost and price
+      if (costVal === '' || isNaN(cost)) { setError('cost', 'Wymagana wartość'); valid = false; }
+      else if (cost < 0) { setError('cost', 'Wartość nie może być ujemna'); valid = false; }
+
+      if (priceVal === '' || isNaN(price)) { setError('price', 'Wymagana wartość'); valid = false; }
+      else if (price <= 0) { setError('price', 'Cena musi być większa od 0'); valid = false; }
+
+      if (!valid) { clearResults(); return; }
+      if (cost > price) { setError('cost', 'Koszt jest wyższy niż cena sprzedaży'); clearResults(); return; }
+
+      margin = (price - cost) / price * 100;
+      document.getElementById('inp-margin').value = margin.toFixed(4);
+
+    } else if (currentMode === 'price') {
+      // Compute price from cost and margin
+      if (costVal === '' || isNaN(cost)) { setError('cost', 'Wymagana wartość'); valid = false; }
+      else if (cost < 0) { setError('cost', 'Wartość nie może być ujemna'); valid = false; }
+
+      if (marginVal === '' || isNaN(margin)) { setError('margin', 'Wymagana wartość'); valid = false; }
+      else if (margin < 0) { setError('margin', 'Marża nie może być ujemna'); valid = false; }
+      else if (margin >= 100) { setError('margin', 'Marża musi być mniejsza niż 100%'); valid = false; }
+
+      if (!valid) { clearResults(); return; }
+
+      price = cost / (1 - margin / 100);
+      document.getElementById('inp-price').value = price.toFixed(4);
+
+    } else if (currentMode === 'cost') {
+      // Compute cost from price and margin
+      if (priceVal === '' || isNaN(price)) { setError('price', 'Wymagana wartość'); valid = false; }
+      else if (price <= 0) { setError('price', 'Cena musi być większa od 0'); valid = false; }
+
+      if (marginVal === '' || isNaN(margin)) { setError('margin', 'Wymagana wartość'); valid = false; }
+      else if (margin < 0) { setError('margin', 'Marża nie może być ujemna'); valid = false; }
+      else if (margin >= 100) { setError('margin', 'Marża musi być mniejsza niż 100%'); valid = false; }
+
+      if (!valid) { clearResults(); return; }
+
+      cost = price * (1 - margin / 100);
+      document.getElementById('inp-cost').value = cost.toFixed(4);
+    }
+
+    // All three valid
+    const profit = price - cost;
+    const markup = cost > 0 ? (price - cost) / cost * 100 : 0;
+
+    setResult('res-cost', fmt(cost), '');
+    setResult('res-price', fmt(price), 'gold');
+    setResult('res-profit', fmt(profit), profit >= 0 ? 'positive' : 'negative');
+    setResult('res-margin', fmtPct(margin), 'gold');
+    setResult('res-markup', fmtPct(markup), markup >= 0 ? 'positive' : 'negative');
+
+    updateVatDisplay(cost, price);
+  }
+
+  function updateVatDisplay(cost, price) {
+    if (vatRate === 0) return;
+    const cEl = document.getElementById('inp-cost');
+    const pEl = document.getElementById('inp-price');
+    const c = cost !== undefined ? cost : parseFloat(cEl.value) || 0;
+    const p = price !== undefined ? price : parseFloat(pEl.value) || 0;
+    const mult = 1 + vatRate / 100;
+    document.getElementById('vi-cost-gross').textContent = fmt(c * mult);
+    document.getElementById('vi-price-gross').textContent = fmt(p * mult);
+  }
+
+  function clearResults() {
+    ['res-cost','res-price','res-profit','res-margin','res-markup'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+      document.getElementById(id).className = 'r-value';
+    });
+  }
+
+  function generateTable() {
+    const v = parseFloat(document.getElementById('tbl-cost').value);
+    const tbody = document.getElementById('table-body');
+    if (isNaN(v) || v <= 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 24px; font-size:0.85rem;">Wpisz poprawny koszt zakupu</td></tr>';
+      return;
+    }
+
+    let html = '';
+    for (let m = 10; m <= 70; m += 5) {
+      const price = v / (1 - m / 100);
+      const profit = price - v;
+      const markup = (price - v) / v * 100;
+      const highlight = m === 30 || m === 50;
+      html += `<tr class="${highlight ? 'highlight-row' : ''}">
+        <td>${m}%</td>
+        <td>${price.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
+        <td class="${m >= 50 ? 'profit-high' : 'profit-positive'}">${profit.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
+        <td>${markup.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} %</td>
+      </tr>`;
+    }
+    tbody.innerHTML = html;
+  }
+
+  function loadExample(cost, margin) {
+    document.getElementById('inp-cost').value = cost;
+    document.getElementById('inp-margin').value = '';
+    document.getElementById('inp-price').value = '';
+    setMode('price');
+    document.getElementById('inp-margin').value = margin;
+    calculate();
+  }
+
+  function resetAll() {
+    ['cost','margin','price'].forEach(f => {
+      document.getElementById('inp-' + f).value = '';
+      clearError(f);
+      document.getElementById('inp-' + f).classList.remove('computed');
+      document.getElementById('inp-' + f).removeAttribute('readonly');
+    });
+    document.getElementById('tbl-cost').value = '';
+    generateTable();
+    clearResults();
+    vatRate = 0;
+    document.getElementById('vat-info-row').style.display = 'none';
+    document.querySelectorAll('.vat-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.vat-btn[data-vat="0"]').classList.add('active');
+    setMode('price');
+  }
+
+  // Init with default values
+  window.onload = () => {
+    setMode('price');
+    document.getElementById('inp-cost').value = 100;
+    document.getElementById('inp-margin').value = 30;
+    calculate();
+    document.getElementById('tbl-cost').value = 100;
+    generateTable();
+  };
+</script>
+
+<!-- SheetJS for Excel parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* EXCEL IMPORT SECTION */
+.excel-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  margin-top: 24px;
+}
+
+.excel-section::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #4cb5af, transparent);
+  opacity: 0.7;
+}
+
+.drop-zone {
+  border: 2px dashed rgba(76,181,175,0.35);
+  border-radius: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  background: rgba(76,181,175,0.04);
+  position: relative;
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: #4cb5af;
+  background: rgba(76,181,175,0.1);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.drop-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.drop-zone h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: var(--cream);
+  margin-bottom: 6px;
+}
+
+.drop-zone p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.drop-zone .drop-hint {
+  font-size: 0.72rem;
+  color: #4cb5af;
+  margin-top: 8px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* Column mapping */
+.col-mapping {
+  display: none;
+  margin-top: 20px;
+  gap: 16px;
+}
+
+.col-mapping.visible { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+.col-select-group label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.col-select-group select {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a95a3' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.col-select-group select:focus { border-color: #4cb5af; }
+
+/* VAT pills for excel section */
+.excel-vat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.excel-vat-row label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.excel-vat-options { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.excel-vat-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: 'DM Mono', monospace;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.excel-vat-btn.active {
+  background: rgba(76,181,175,0.15);
+  border-color: #4cb5af;
+  color: #4cb5af;
+}
+
+.btn-process {
+  margin-top: 16px;
+  padding: 12px 28px;
+  background: rgba(76,181,175,0.15);
+  border: 1px solid #4cb5af;
+  border-radius: 8px;
+  color: #4cb5af;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.03em;
+}
+
+.btn-process:hover {
+  background: rgba(76,181,175,0.25);
+}
+
+.btn-export {
+  margin-top: 0;
+  padding: 10px 22px;
+  background: rgba(201,168,76,0.12);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  color: var(--gold-light);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-export:hover { background: rgba(201,168,76,0.22); }
+
+/* Excel results table */
+.excel-results {
+  display: none;
+  margin-top: 24px;
+}
+
+.excel-results.visible { display: block; }
+
+.excel-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.excel-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.excel-stat {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+.excel-stat .es-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.excel-stat .es-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.05rem;
+  color: var(--cream);
+}
+
+.excel-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.excel-table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.excel-table-wrap::-webkit-scrollbar-track { background: var(--navy); }
+.excel-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.excel-table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+
+.excel-table-wrap thead { position: sticky; top: 0; z-index: 2; }
+
+.excel-table-wrap thead th {
+  background: rgba(76,181,175,0.12);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4cb5af;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.excel-table-wrap thead th:not(:first-child) { text-align: right; }
+
+.excel-table-wrap tbody tr {
+  border-bottom: 1px solid rgba(201,168,76,0.07);
+  transition: background 0.15s;
+}
+
+.excel-table-wrap tbody tr:last-child { border-bottom: none; }
+.excel-table-wrap tbody tr:hover { background: rgba(76,181,175,0.04); }
+
+.excel-table-wrap tbody td {
+  padding: 9px 14px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.excel-table-wrap tbody td:not(:first-child) {
+  text-align: right;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.cell-gross { color: var(--gold-light) !important; font-weight: 500; }
+.cell-vat-amount { color: #4cb5af !important; }
+
+.file-name-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(76,181,175,0.1);
+  border: 1px solid rgba(76,181,175,0.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  color: #4cb5af;
+  font-family: 'DM Mono', monospace;
+  margin-top: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mapping-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+</style>
+
+<!-- EXCEL IMPORT SECTION HTML -->
+<div class="excel-section" style="margin-bottom: 0;">
+  <div class="section-label" style="border-image: linear-gradient(90deg, transparent, #4cb5af, transparent) 1;">Import Excel</div>
+  <div class="card-title">Przelicz ceny z pliku Excel</div>
+  <div class="card-subtitle">Przeciągnij plik .xlsx lub .xls z produktami i cenami netto — aplikacja wyliczy ceny brutto dla wybranej stawki VAT.</div>
+
+  <div class="drop-zone" id="drop-zone" style="margin-top:20px">
+    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(this.files[0])">
+    <span class="drop-icon">📊</span>
+    <h3>Przeciągnij plik Excel tutaj</h3>
+    <p>lub kliknij, aby wybrać plik</p>
+    <div class="drop-hint">Obsługiwane formaty: .xlsx, .xls, .csv</div>
+  </div>
+
+  <div id="file-name-badge" style="display:none" class="file-name-badge">📄 <span id="file-name-text"></span></div>
+
+  <!-- COLUMN MAPPING -->
+  <div class="col-mapping" id="col-mapping">
+    <div class="col-select-group">
+      <label>Kolumna z nazwą produktu</label>
+      <select id="col-name"></select>
+    </div>
+    <div class="col-select-group">
+      <label>Kolumna z ceną netto (zł)</label>
+      <select id="col-price"></select>
+    </div>
+    <div class="col-select-group">
+      <label>Kolumna z kosztem zakupu (opcjonalnie)</label>
+      <select id="col-cost-excel">
+        <option value="">— pomiń —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- VAT SELECTOR -->
+  <div class="excel-vat-row" id="excel-vat-row" style="display:none">
+    <label>Stawka VAT:</label>
+    <div class="excel-vat-options">
+      <button class="excel-vat-btn" data-vat="0" onclick="setExcelVat(0)">0%</button>
+      <button class="excel-vat-btn active" data-vat="23" onclick="setExcelVat(23)">23%</button>
+      <button class="excel-vat-btn" data-vat="8" onclick="setExcelVat(8)">8%</button>
+      <button class="excel-vat-btn" data-vat="5" onclick="setExcelVat(5)">5%</button>
+    </div>
+  </div>
+
+  <div class="mapping-actions" id="mapping-actions" style="display:none">
+    <button class="btn-process" onclick="processExcel()">▶ Przelicz ceny brutto</button>
+    <button class="btn-export" onclick="exportExcel()" id="btn-export" style="display:none">⬇ Pobierz wynik (.xlsx)</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="excel-results" id="excel-results">
+    <div class="excel-results-header">
+      <div class="section-label" style="margin-bottom:0; flex:1">Wyniki przeliczenia</div>
+    </div>
+    <div class="excel-stats" id="excel-stats"></div>
+    <div class="excel-table-wrap">
+      <table id="excel-output-table">
+        <thead id="excel-thead"></thead>
+        <tbody id="excel-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// EXCEL MODULE
+let excelData = [];
+let excelHeaders = [];
+let excelVatRate = 23;
+let processedRows = [];
+
+function setExcelVat(rate) {
+  excelVatRate = rate;
+  document.querySelectorAll('.excel-vat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.excel-vat-btn[data-vat="${rate}"]`).classList.add('active');
+}
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFileSelect(file);
+});
+
+function handleFileSelect(file) {
+  if (!file) return;
+  document.getElementById('file-name-text').textContent = file.name;
+  document.getElementById('file-name-badge').style.display = 'inline-flex';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+    if (json.length < 2) { alert('Plik jest pusty lub ma tylko nagłówki.'); return; }
+
+    excelHeaders = json[0].map((h, i) => h || `Kolumna ${i + 1}`);
+    excelData = json.slice(1).filter(row => row.some(c => c !== ''));
+
+    populateSelects();
+    document.getElementById('col-mapping').classList.add('visible');
+    document.getElementById('excel-vat-row').style.display = 'flex';
+    document.getElementById('mapping-actions').style.display = 'flex';
+    document.getElementById('excel-results').classList.remove('visible');
+    document.getElementById('btn-export').style.display = 'none';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function populateSelects() {
+  const nameSelect = document.getElementById('col-name');
+  const priceSelect = document.getElementById('col-price');
+  const costSelect = document.getElementById('col-cost-excel');
+
+  nameSelect.innerHTML = '';
+  priceSelect.innerHTML = '';
+  costSelect.innerHTML = '<option value="">— pomiń —</option>';
+
+  excelHeaders.forEach((h, i) => {
+    const opt = () => document.createElement('option');
+    const o1 = opt(); o1.value = i; o1.textContent = h;
+    const o2 = opt(); o2.value = i; o2.textContent = h;
+    const o3 = opt(); o3.value = i; o3.textContent = h;
+    nameSelect.appendChild(o1);
+    priceSelect.appendChild(o2);
+    costSelect.appendChild(o3);
+  });
+
+  // Auto-detect columns by common names
+  const lower = excelHeaders.map(h => h.toString().toLowerCase());
+  const nameIdx = lower.findIndex(h => /nazwa|produkt|towar|opis|name/i.test(h));
+  const priceIdx = lower.findIndex(h => /cena.?netto|netto|price|cena/i.test(h));
+  const costIdx = lower.findIndex(h => /koszt|zakup|purchase|cost/i.test(h));
+
+  if (nameIdx >= 0) nameSelect.selectedIndex = nameIdx;
+  if (priceIdx >= 0) priceSelect.selectedIndex = priceIdx;
+  if (costIdx >= 0) {
+    // find option with that value
+    for (let o of costSelect.options) { if (o.value == costIdx) { o.selected = true; break; } }
+  }
+}
+
+function processExcel() {
+  const nameCol = parseInt(document.getElementById('col-name').value);
+  const priceCol = parseInt(document.getElementById('col-price').value);
+  const costColVal = document.getElementById('col-cost-excel').value;
+  const hasCost = costColVal !== '';
+  const costCol = hasCost ? parseInt(costColVal) : -1;
+  const vatMult = 1 + excelVatRate / 100;
+
+  processedRows = [];
+  let totalNetto = 0, totalBrutto = 0, skipped = 0;
+
+  excelData.forEach(row => {
+    const name = row[nameCol] ?? '';
+    const rawPrice = row[priceCol];
+    const netPrice = parseFloat(String(rawPrice).replace(',', '.'));
+    if (isNaN(netPrice) || netPrice < 0) { skipped++; return; }
+
+    const gross = netPrice * vatMult;
+    const vatAmount = gross - netPrice;
+    const obj = { name, netPrice, gross, vatAmount };
+
+    if (hasCost) {
+      const rawCost = row[costCol];
+      const cost = parseFloat(String(rawCost).replace(',', '.'));
+      if (!isNaN(cost) && cost > 0) {
+        obj.cost = cost;
+        obj.margin = gross > 0 ? (gross - cost) / gross * 100 : 0;
+      }
+    }
+
+    processedRows.push(obj);
+    totalNetto += netPrice;
+    totalBrutto += gross;
+  });
+
+  // Render stats
+  document.getElementById('excel-stats').innerHTML = `
+    <div class="excel-stat"><div class="es-label">Produktów</div><div class="es-value">${processedRows.length}</div></div>
+    <div class="excel-stat"><div class="es-label">Pominięto wierszy</div><div class="es-value">${skipped}</div></div>
+    <div class="excel-stat"><div class="es-label">Suma cen netto</div><div class="es-value">${totalNetto.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</div></div>
+    <div class="excel-stat"><div class="es-label">Suma cen brutto (VAT ${excelVatRate}%)</div><div class="es-value" style="color:var(--gold-light)">${totalBrutto.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</div></div>
+  `;
+
+  // Render table header
+  const hasCostInResults = processedRows.some(r => r.cost !== undefined);
+  document.getElementById('excel-thead').innerHTML = `<tr>
+    <th>Nazwa produktu</th>
+    <th>Cena netto</th>
+    <th>VAT ${excelVatRate}%</th>
+    <th>Cena brutto</th>
+    ${hasCostInResults ? '<th>Koszt zakupu</th><th>Marża (brutto)</th>' : ''}
+  </tr>`;
+
+  // Render rows
+  document.getElementById('excel-tbody').innerHTML = processedRows.map(r => `<tr>
+    <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis;">${r.name}</td>
+    <td>${r.netPrice.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
+    <td class="cell-vat-amount">${r.vatAmount.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
+    <td class="cell-gross">${r.gross.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
+    ${r.cost !== undefined ? `<td>${r.cost.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td><td style="color:var(--gold-light)">${r.margin.toFixed(2)} %</td>` : ''}
+  </tr>`).join('');
+
+  document.getElementById('excel-results').classList.add('visible');
+  document.getElementById('btn-export').style.display = 'inline-flex';
+}
+
+function exportExcel() {
+  const hasCostInResults = processedRows.some(r => r.cost !== undefined);
+  const headers = ['Nazwa produktu', 'Cena netto (zł)', `VAT ${excelVatRate}% (zł)`, 'Cena brutto (zł)'];
+  if (hasCostInResults) headers.push('Koszt zakupu (zł)', 'Marża % (brutto)');
+
+  const rows = processedRows.map(r => {
+    const row = [r.name, r.netPrice, parseFloat(r.vatAmount.toFixed(2)), parseFloat(r.gross.toFixed(2))];
+    if (hasCostInResults) {
+      row.push(r.cost !== undefined ? r.cost : '');
+      row.push(r.margin !== undefined ? parseFloat(r.margin.toFixed(2)) : '');
+    }
+    return row;
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = headers.map((_, i) => ({ wch: i === 0 ? 35 : 18 }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ceny brutto');
+  XLSX.writeFile(wb, `ceny_brutto_VAT${excelVatRate}.xlsx`);
+}
+</script>
+</body>
+</html>
