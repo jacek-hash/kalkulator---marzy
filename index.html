@@ -1428,11 +1428,24 @@
     </div>
   </div>
 
-  <div class="mapping-actions" id="mapping-actions" style="display:none">
-    <button class="btn-process" onclick="processExcel()">▶ Przelicz ceny brutto</button>
-    <button class="btn-export" onclick="exportExcel()" id="btn-export" style="display:none">⬇ Pobierz wynik (.xlsx)</button>
+  <!-- MARGIN ROW -->
+  <div class="excel-vat-row" id="excel-margin-row" style="display:none; margin-top:12px; align-items:center; gap:12px; flex-wrap:wrap;">
+    <label>Docelowa marża:</label>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div style="position:relative; display:inline-flex; align-items:center;">
+        <input type="number" id="excel-margin-input" min="0" max="99" step="1" value="30"
+          style="width:90px; background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:7px 36px 7px 12px; font-family:'DM Mono',monospace; font-size:0.95rem; color:var(--text); outline:none;">
+        <span style="position:absolute; right:10px; font-size:0.8rem; color:var(--text-muted); pointer-events:none;">%</span>
+      </div>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Doda kolumnę z ceną sprzedaży przy tej marży</span>
+    </div>
   </div>
+
+  <div class="mapping-actions" id="mapping-actions" style="display:none">
+    <button class="btn-process" onclick="processExcel()">▶ Przelicz</button>
+    <button class="btn-export" onclick="exportExcel()" id="btn-export" style="display:none">⬇ Pobierz wynik (.xlsx)</button>
     <button class="btn-reset" onclick="resetExcel()" style="margin-top:0">&#8635; Wyczyść</button>
+  </div>
 
   <!-- RESULTS -->
   <div class="excel-results" id="excel-results">
@@ -1535,63 +1548,75 @@ function populateSelects() {
 function processExcel() {
   const nameCol = parseInt(document.getElementById('col-name').value);
   const priceCol = parseInt(document.getElementById('col-price').value);
-  const costColVal = document.getElementById('col-cost-excel').value;
-  const hasCost = costColVal !== '';
-  const costCol = hasCost ? parseInt(costColVal) : -1;
-  const vatMult = 1 + excelVatRate / 100;
+  const vatMult  = 1 + excelVatRate / 100;
+  const margin   = parseFloat(document.getElementById('excel-margin-input').value) || 0;
+
+  if (margin <= 0 || margin >= 100) {
+    alert('Wpisz docelową marżę (1–99%) przed przeliczeniem.');
+    return;
+  }
 
   processedRows = [];
-  let totalNetto = 0, totalBrutto = 0, skipped = 0;
+  let sumNettoZakup = 0, sumBruttoZakup = 0, sumNettoSprzedaz = 0, sumBruttoSprzedaz = 0, skipped = 0;
 
   excelData.forEach(row => {
-    const name = row[nameCol] ?? '';
-    const rawPrice = row[priceCol];
-    const netPrice = parseFloat(String(rawPrice).replace(',', '.'));
-    if (isNaN(netPrice) || netPrice < 0) { skipped++; return; }
+    const name    = row[nameCol] ?? '';
+    const rawVal  = row[priceCol];
+    const nettoZakup = parseFloat(String(rawVal).replace(',', '.'));
+    if (isNaN(nettoZakup) || nettoZakup <= 0) { skipped++; return; }
 
-    const gross = netPrice * vatMult;
-    const vatAmount = gross - netPrice;
-    const obj = { name, netPrice, gross, vatAmount };
+    // Formuły:
+    // Cena brutto zakupu = netto zakupu × (1 + VAT%)
+    const bruttoZakup = nettoZakup * vatMult;
 
-    if (hasCost) {
-      const rawCost = row[costCol];
-      const cost = parseFloat(String(rawCost).replace(',', '.'));
-      if (!isNaN(cost) && cost > 0) {
-        obj.cost = cost;
-        obj.margin = gross > 0 ? (gross - cost) / gross * 100 : 0;
-      }
-    }
+    // Cena netto sprzedaży = netto zakupu ÷ (1 − marża%)
+    // Marża odnosi się do ceny sprzedaży: (cena_sprz − koszt) / cena_sprz = marża%
+    const nettoSprzedaz = nettoZakup / (1 - margin / 100);
 
-    processedRows.push(obj);
-    totalNetto += netPrice;
-    totalBrutto += gross;
+    // Cena brutto sprzedaży = netto sprzedaży × (1 + VAT%)
+    const bruttoSprzedaz = nettoSprzedaz * vatMult;
+
+    // Zysk netto i marża kontrolna
+    const zyskNetto = nettoSprzedaz - nettoZakup;
+    const marżaKontrolna = (nettoSprzedaz - nettoZakup) / nettoSprzedaz * 100;
+
+    processedRows.push({ name, nettoZakup, bruttoZakup, nettoSprzedaz, bruttoSprzedaz, zyskNetto, marżaKontrolna });
+    sumNettoZakup    += nettoZakup;
+    sumBruttoZakup   += bruttoZakup;
+    sumNettoSprzedaz += nettoSprzedaz;
+    sumBruttoSprzedaz+= bruttoSprzedaz;
   });
+
+  const fmt = (v) => v.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' zł';
 
   // Render stats
   document.getElementById('excel-stats').innerHTML = `
     <div class="excel-stat"><div class="es-label">Produktów</div><div class="es-value">${processedRows.length}</div></div>
     <div class="excel-stat"><div class="es-label">Pominięto wierszy</div><div class="es-value">${skipped}</div></div>
-    <div class="excel-stat"><div class="es-label">Suma cen netto</div><div class="es-value">${totalNetto.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</div></div>
-    <div class="excel-stat"><div class="es-label">Suma cen brutto (VAT ${excelVatRate}%)</div><div class="es-value" style="color:var(--gold-light)">${totalBrutto.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</div></div>
+    <div class="excel-stat"><div class="es-label">Suma netto zakupu</div><div class="es-value">${fmt(sumNettoZakup)}</div></div>
+    <div class="excel-stat"><div class="es-label">Suma brutto zakupu</div><div class="es-value">${fmt(sumBruttoZakup)}</div></div>
+    <div class="excel-stat"><div class="es-label">Suma netto sprzedaży</div><div class="es-value" style="color:#4cb5af">${fmt(sumNettoSprzedaz)}</div></div>
+    <div class="excel-stat"><div class="es-label">Suma brutto sprzedaży</div><div class="es-value" style="color:var(--gold-light)">${fmt(sumBruttoSprzedaz)}</div></div>
   `;
 
   // Render table header
-  const hasCostInResults = processedRows.some(r => r.cost !== undefined);
   document.getElementById('excel-thead').innerHTML = `<tr>
-    <th>Nazwa produktu</th>
-    <th>Cena netto</th>
-    <th>VAT ${excelVatRate}%</th>
-    <th>Cena brutto</th>
-    ${hasCostInResults ? '<th>Koszt zakupu</th><th>Marża (brutto)</th>' : ''}
+    <th style="text-align:left">Nazwa produktu</th>
+    <th>Cena netto zakupu</th>
+    <th>Cena brutto zakupu<br><small style="font-weight:400;color:#8a95a3">netto × (1+VAT ${excelVatRate}%)</small></th>
+    <th>Marża %</th>
+    <th>Cena netto sprzedaży<br><small style="font-weight:400;color:#8a95a3">netto ÷ (1−marża%)</small></th>
+    <th>Cena brutto sprzedaży<br><small style="font-weight:400;color:#8a95a3">netto sprz. × (1+VAT ${excelVatRate}%)</small></th>
   </tr>`;
 
   // Render rows
   document.getElementById('excel-tbody').innerHTML = processedRows.map(r => `<tr>
-    <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis;">${r.name}</td>
-    <td>${r.netPrice.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
-    <td class="cell-vat-amount">${r.vatAmount.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
-    <td class="cell-gross">${r.gross.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td>
-    ${r.cost !== undefined ? `<td>${r.cost.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2})} zł</td><td style="color:var(--gold-light)">${r.margin.toFixed(2)} %</td>` : ''}
+    <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; text-align:left">${r.name}</td>
+    <td>${fmt(r.nettoZakup)}</td>
+    <td class="cell-vat-amount">${fmt(r.bruttoZakup)}</td>
+    <td style="color:var(--gold-light)">${r.marżaKontrolna.toFixed(2)} %</td>
+    <td style="color:#4cb5af">${fmt(r.nettoSprzedaz)}</td>
+    <td class="cell-gross" style="font-weight:600">${fmt(r.bruttoSprzedaz)}</td>
   </tr>`).join('');
 
   document.getElementById('excel-results').classList.add('visible');
@@ -1599,25 +1624,32 @@ function processExcel() {
 }
 
 function exportExcel() {
-  const hasCostInResults = processedRows.some(r => r.cost !== undefined);
-  const headers = ['Nazwa produktu', 'Cena netto (zł)', `VAT ${excelVatRate}% (zł)`, 'Cena brutto (zł)'];
-  if (hasCostInResults) headers.push('Koszt zakupu (zł)', 'Marża % (brutto)');
+  const margin = parseFloat(document.getElementById('excel-margin-input').value) || 0;
 
-  const rows = processedRows.map(r => {
-    const row = [r.name, r.netPrice, parseFloat(r.vatAmount.toFixed(2)), parseFloat(r.gross.toFixed(2))];
-    if (hasCostInResults) {
-      row.push(r.cost !== undefined ? r.cost : '');
-      row.push(r.margin !== undefined ? parseFloat(r.margin.toFixed(2)) : '');
-    }
-    return row;
-  });
+  const headers = [
+    'Nazwa produktu',
+    'Cena netto zakupu (zł)',
+    `Cena brutto zakupu VAT ${excelVatRate}% (zł)`,
+    'Marża % (od ceny sprzedaży)',
+    'Cena netto sprzedaży (zł)',
+    `Cena brutto sprzedaży VAT ${excelVatRate}% (zł)`
+  ];
+
+  const rows = processedRows.map(r => [
+    r.name,
+    parseFloat(r.nettoZakup.toFixed(2)),
+    parseFloat(r.bruttoZakup.toFixed(2)),
+    parseFloat(r.marżaKontrolna.toFixed(2)),
+    parseFloat(r.nettoSprzedaz.toFixed(2)),
+    parseFloat(r.bruttoSprzedaz.toFixed(2))
+  ]);
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = headers.map((_, i) => ({ wch: i === 0 ? 35 : 18 }));
+  ws['!cols'] = [{ wch: 35 }, { wch: 24 }, { wch: 28 }, { wch: 22 }, { wch: 24 }, { wch: 28 }];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ceny brutto');
-  XLSX.writeFile(wb, `ceny_brutto_VAT${excelVatRate}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, 'Ceny sprzedaży');
+  XLSX.writeFile(wb, `ceny_sprzedazy_marza${margin}_VAT${excelVatRate}.xlsx`);
 }
 
 function resetExcel() {
@@ -1628,6 +1660,7 @@ function resetExcel() {
   document.getElementById("file-name-badge").style.display = "none";
   document.getElementById("col-mapping").classList.remove("visible");
   document.getElementById("excel-vat-row").style.display = "none";
+  document.getElementById("excel-margin-row").style.display = "none";
   document.getElementById("mapping-actions").style.display = "none";
   document.getElementById("excel-results").classList.remove("visible");
   document.getElementById("btn-export").style.display = "none";
